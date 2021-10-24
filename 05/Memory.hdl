@@ -27,11 +27,16 @@ CHIP Memory {
     OUT out[16];
 
     PARTS:
-	DMux(in=load, sel=address[0], a=loada, b=loadb);
 	
-    RAM16K(in=in, load=loada, address=address[1..14], out=out1);
-	RAM16K(in=in, load=loadb, address=address[1..14], out=out2);
+// Check if the address is in the RAM, Screen or keybord, and set the load in accordance
+	DMux4Way(in=load, sel=address[13..14], a=loadRam1, b=loadRam2, c=loadScreen, d=loadKey);
+	Or(a=loadRam1, b=loadRam2, out=loadRam);
 	
-	Mux16(a=out1, b=out2, sel=address[0], out=out);
+// Get the data from the memory according to the load and the address
+    RAM16K(in=in, load=loadRam, address=address[0..13], out=outRam);
+	Screen(in=in, load=loadScreen, address=address[0..12], out=outScreen);
+	Keyboard(out=outKey);
 	
+// Output the data according to the given address
+	Mux4Way16(a=outRam, b=outRam, c=outScreen, d=outKey, sel=address[13..14], out=out);
 }
