@@ -1,0 +1,33 @@
+rachel,tamir.golan
+===============================================================================
+Rachel Assael, ID 208287334, rachel.assael@mail.huji.ac.il
+Tamir Golan, ID 208629972, tamir.golan@mail.huji.ac.il
+===============================================================================
+
+                           Project 2 - Boolean Arithmetic
+                           ------------------------------
+  
+
+Submitted Files
+---------------
+README - This file.
+ShiftLeft.hdl - shift the input one bit to the left, equal to multiplying the input by 2.
+ShiftRight.hdl - shift the input one bit to the right, equal to dividing the input by 2.
+HalfAdder.hdl - Computes the sum of two bits.
+FullAdder.hdl - Computes the sum of three bits.
+Add16.hdl - Add two inputs of 16 bit.
+Inc16.hdl - Add 1 to 16-bit input.
+ALU.hdl - The ALU (Arithmetic Logic Unit). Compute function according to input bits.
+Or16Way.hdl - Do or functions on 16-bit input (in[0] or ... in[15]).
+Include other files required by your project, if there are any.
+
+Remarks
+-------
+* The README file must contain the following:
+- In the first line: login(s) of the author(s), 
+separated by commas and nothing else! 
+If you work alone, do not include a comma. 
+Logins should be identical to the names of your home folders and are 
+case-sensitive.
+- Name(s), email(s) and ID(s) of the project's author(s).
+- Any remarks you have about your submission.
