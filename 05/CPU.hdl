@@ -54,8 +54,9 @@ CHIP CPU {
 // Send to ALU: D, A/M, six bits from the istruction
 	ALU(x=outD, y=MorA, zx=instruction[11], nx=instruction[10], zy=instruction[9], ny=instruction[8], f=instruction[7], no=instruction[6], out=outALU, zr=zr, ng=ng);
 	
-// Register D get the ALU output and change/not change according to instruction[4]
-	DRegister(in=outALU, load=instruction[4], out=outD);
+// Register D get the ALU output and change/not change according to instruction[4] and just if it is C-instruction
+	And(a=instruction[4], b=instruction[15], out=loadD);
+	DRegister(in=outALU, load=loadD, out=outD);
 	
 // Set writeM=1 if it's C-instruction and instruction[3]=1
 	And(a=instruction[15], b=instruction[3], out=writeM);
