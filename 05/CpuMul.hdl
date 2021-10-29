@@ -1,0 +1,120 @@
+// This file is part of nand2tetris, as taught in The Hebrew University,
+// and was written by Aviv Yaish, and is published under the Creative 
+// Common Attribution-NonCommercial-ShareAlike 3.0 Unported License 
+// https://creativecommons.org/licenses/by-nc-sa/3.0/
+
+// This chip is an extension of the regular CPU that uses the extended ALU.
+// If instruction[15]==0 or (instruction[14] and instruction[13] equals 1)
+// the CpuMul behave exactly as the same as the regular CPU.
+// If the instruction is a c-instruction and instruction[14] == 0, the chip will 
+// behave as follows:
+//  Instruction  | 12 | 11 | 10 |
+// ______________________________
+// dest=D<<;jump | 0  | 1  | 1  |
+// dest=A<<;jump | 0  | 1  | 0  |
+// dest=M<<;jump | 1  | 1  | 0  |
+// dest=D>>;jump | 0  | 0  | 1  |
+// dest=A>>;jump | 0  | 0  | 0  |
+// dest=M>>;jump | 1  | 0  | 0  |
+
+CHIP CpuMul {
+    IN  inM[16],         // M value input  (M = contents of RAM[A])
+        instruction[16], // Instruction for execution
+        reset;           // Signals whether to re-start the current
+                         // program (reset=1) or continue executing
+                         // the current program (reset=0).
+    OUT outM[16],        // M value output
+        writeM,          // Write into M? 
+        addressM[15],    // Address in data memory (of M)
+        pc[15];          // address of next instruction
+    
+    PARTS:
+    // If the instruction is A-instruction, put its address in "inA". 
+	// If the instruction is C-instruction, put "outALU" in "inA".
+	Mux16(a=instruction, b=outALU, sel=instruction[15], out=inA);
+	
+// If its A-instruction or instruction[5]=1, put "inA" in ARegister. otherwise do not (load=0)
+	Not(in=instruction[15], out=isAinst);
+	Or(a=isAinst, b=instruction[5], out=loadA);
+    ARegister(in=inA, load=loadA, out=outA);
+	
+// Choose A or M, according to instruction[12] bit
+	Mux16(a=outA, b=inM, sel=instruction[12], out=MorA);
+	
+// Send to ExtendAlu: D, A/M, nine bits from the istruction
+	ExtendAlu(x=outD, y=MorA, instruction=instruction[6..14], out=outALU, zr=zr, ng=ng);
+	
+// Register D get the ALU output and change/not change according to instruction[4] and just if it is C-instruction
+	And(a=instruction[4], b=instruction[15], out=loadD);
+	DRegister(in=outALU, load=loadD, out=outD);
+	
+// Set writeM=1 if it's C-instruction and instruction[3]=1
+	And(a=instruction[15], b=instruction[3], out=writeM);
+	
+// Put ALU output in "outM"
+	Or16(a=false, b=outALU, out=outM);
+	
+// Put A-register output in "addressM" - temporary its 16-bit output (and not addressM[0..14])
+	Or16(a=false, b=outA, out[0..14]=addressM);
+
+// The foloowing part set jump=0 if we need to change PC to A-register, and jump=0 otherwise.
+	
+	Not(in=instruction[2], out=notJ1);
+	Not(in=instruction[1], out=notJ2);
+	Not(in=instruction[0], out=notJ3);
+	Or(a=zr, b=ng, out=zrOrng);
+    Not(in=zrOrng, out=pos);
+	Not(in=ng, out=notNg);
+	
+	// Check JGT: j1=j2=0 and j3=1 and out>0
+	And(a=notJ1, b=notJ2, out=notJ12);
+	And(a=instruction[0], b=pos, out=GT);
+	And(a=notJ12, b=GT, out=JGT);
+	
+	// Check JEQ: j1=j3=0 and j2=1 and zr=1, ng=0
+	And(a=notJ1, b=notJ3, out=notJ13);
+	And(a=instruction[1], b=zr, out=middleEQ);
+	And(a=middleEQ, b=notNg, out=EQ);
+	And(a=notJ13, b=EQ, out=JEQ);
+	
+	// Check JGE: JGT or JEQ
+	Or(a=GT, b=EQ, out=GE);
+	And(a=notJ1, b=GE, out=JGE);
+	
+	// Check JLT: j3=j2=0 and j1=1 and out<0
+	And(a=notJ2, b=notJ3, out=notJ23);
+	And(a=instruction[2], b=ng, out=LT);
+	And(a=notJ23, b=LT, out=JLT);
+	
+	// Check JNE: j2=0 and j1=j3=1 and zr=0
+	Not(in=zr, out=notZr);
+	And(a=instruction[2], b=instruction[0], out=j13);
+	And(a=j13, b=notZr, out=NE);
+	And(a=notJ2, b=NE, out=JNE);
+	
+	// Check JLE: JLT or JEQ
+	Or(a=LT, b=EQ, out=LE);
+	And(a=notJ3, b=LE, out=JLE);
+	
+	// allOnes=1 if j1=j2=j3=1 
+	And(a=instruction[2], b=instruction[1], out=j1Andj2);
+	And(a=j1Andj2, b=instruction[0], out=allOnes);
+	
+	// notAllZeros=1 if at least one of j1,j2,j3 is not equal to 0
+	Or(a=instruction[2], b=instruction[1], out=j1Orj2);
+	Or(a=instruction[0], b=j1Orj2, out=notAllZeros);
+	
+	// Jump if it is C-instruction and j1=j2=j3=1 or one of the above is correct
+	Or(a=JGT, b=JEQ, out=GTorEQ);
+	Or(a=JGE, b=JLT, out=GEorLT);
+	Or(a=JNE, b=JLE, out=NEorLE);
+	Or(a=GTorEQ, b=allOnes, out=GTorEQorAll);
+	Or(a=GEorLT, b=NEorLE, out=GEorLTorNEorLE);
+	Or(a=GTorEQorAll, b=GEorLTorNEorLE, out=allCond);
+	And(a=allCond, b=instruction[15], out=jump);
+	
+// We should only add 1 to PC if there is no jump
+	Not(in=jump, out=toInc);
+	
+	PC(in=outA, load=jump, inc=toInc, reset=reset, out[0..14]=pc);
+}
