@@ -1,7 +1,7 @@
-bartsimp, lisasimp
+rachel,tamir.golan
 ===============================================================================
-Bart Simpson, ID 011111111, bart@mail.huji.ac.il
-Lisa Simpson, ID 022222222, lisa@mail.huji.ac.il
+Rachel Assael, ID 208287334, rachel.assael@mail.huji.ac.il
+Tamir Golan, ID 208629972, tamir.golan@mail.huji.ac.il
 ===============================================================================
 
                            Project 5 - Computer Architecture
@@ -11,9 +11,11 @@ Lisa Simpson, ID 022222222, lisa@mail.huji.ac.il
 Submitted Files
 ---------------
 README - This file.
-CPU.hdl - 
-Memory.hdl - 
-Computer.hdl - 
+ExtendAlu.hdl - An extebd of the ALU unit, include shift options.
+CpuMul.hdl - An extend of the CPU using the ExtendAlu unit.
+CPU.hdl - The CPU unit of the computer.
+Memory.hdl - The memory of the computer.
+Computer.hdl - The whole computer implementation, include the CPU and the memory.
 Include other files required by your project, if there are any.
 
 Remarks
