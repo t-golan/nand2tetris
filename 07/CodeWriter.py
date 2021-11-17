@@ -6,6 +6,10 @@ Unported License (https://creativecommons.org/licenses/by-nc-sa/3.0/).
 """
 import typing
 
+SEGMENTS = {"local": "LCL", "argument": "ARG", "this": "THIS", "that": "THAT", "pointer 0": "R3", "pointer 1": "R4",
+            "constant": "CONST", "temp": "TEMP"}
+REG_SEGMENTS = {"LCL", "ARG", "THIS", "THAT", "TEMP"}
+
 
 class CodeWriter:
     """Translates VM commands into Hack assembly code."""
@@ -16,6 +20,7 @@ class CodeWriter:
         Args:
             output_stream (typing.TextIO): output stream.
         """
+        self.output = output_stream
         # Your code goes here!
         pass
 
@@ -36,8 +41,35 @@ class CodeWriter:
         Args:
             command (str): an arithmetic command.
         """
-        # Your code goes here!
-        pass
+        # D = first argument in stack, SP--
+        self.output.write("@SP\nA = M\nD = M\n@SP\nM = M - 1\n")
+
+        if command == "not":
+            self.output.write("D = !D\n")
+        elif command == "neg":
+            self.output.write("D = -D\n")
+
+        else:  # command in ("add", "sub", "eq", "gt", "lt", "and", "or"):
+            # M = the next argument in stack
+            "@SP\nA = M\n"
+            if command == "add":
+                "D = D + M\n"
+            elif command == "sub":
+                "D = M - D\n"
+            elif command == "eq":
+                "D = M - D\nD = !D\n"
+            elif command == "gt":
+                "D = M - D\n"  #################
+            elif command == "lt":
+                "D = M - D\n"  #####################
+            elif command == "and":
+                "D = M&D\n"
+            elif command == "or":
+                "D = M|D\n"
+
+        # push D to the stack, SP++
+            self.output.write("@SP\nA = M\nM = D\n@SP\nM = M + 1\n")
+
 
     def write_push_pop(self, command: str, segment: str, index: int) -> None:
         """Writes the assembly code that is the translation of the given 
@@ -48,8 +80,30 @@ class CodeWriter:
             segment (str): the memory segment to operate on.
             index (int): the index in the memory segment.
         """
-        # Your code goes here!
-        pass
+        if command == "C_POP":
+            if SEGMENTS[segment] in REG_SEGMENTS:
+                # addr = SEGMENTS[segment] + index (the address)"
+                "@{0}\nD = {1}\nD = D + A\n".format(SEGMENTS[segment], index)
+                # SP--
+                "A = SP\nM = M - 1\n"
+                # "*addr = *SP"   ##########################################
+                "@D\nM = "
+                "A = M\n"
+
+
+        elif command == "C_PUSH":
+            if SEGMENTS[segment] in REG_SEGMENTS:
+                # D = *(SEGMENTS[segment] + index)"
+                self.output.write("@{0}\nD = A\n@{1}\nA = A + D\nA = M\nD = M\n".format(SEGMENTS[segment], index))
+            elif SEGMENTS[segment] == "CONST":
+                # D = index
+                self.output.write("@{0}\nD = A\n".format(index))
+
+            # *SP = D
+            "@SP\nA = M\nM = D\n"
+            # SP++
+            "@SP\nM = M + 1\n"
+
 
     def close(self) -> None:
         """Closes the output file."""
