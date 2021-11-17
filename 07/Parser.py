@@ -26,31 +26,29 @@ class Parser:
 
     def __init__(self, input_file: typing.TextIO) -> None:
         """Gets ready to parse the input file.
-
         Args:
             input_file (typing.TextIO): input file.
         """
         self.lines = input_file.read().splitlines()
         self.length = len(self.lines)
         self.line_idx = -1
-        self.cur_line = self.lines[0]
+        self.cur_line = None
+        self.type = None
 
     def has_more_commands(self) -> bool:
         """Are there more commands in the input?
-
         Returns:
             bool: True if there are more commands, False otherwise.
         """
-        # Your code goes here!
-        return self.length > self.line_idx
+        return self.length - 1 > self.line_idx
 
     def advance(self) -> None:
-        """Reads the next command from the input and makes it the current 
+        """Reads the next command from the input and makes it the current
         command. Should be called only if has_more_commands() is true. Initially
         there is no current command.
         """
-        # Your code goes here!
         self.line_idx += 1
+        # if self.lines <
         self.cur_line = self.lines[self.line_idx].split()
 
     def command_type(self) -> str:
@@ -71,8 +69,8 @@ class Parser:
     def arg1(self) -> str:
         """
         Returns:
-            str: the first argument of the current command. In case of 
-            "C_ARITHMETIC", the command itself (add, sub, etc.) is returned. 
+            str: the first argument of the current command. In case of
+            "C_ARITHMETIC", the command itself (add, sub, etc.) is returned.
             Should not be called if the current command is "C_RETURN".
         """
         if self.type == C_ARITHMETIC:
@@ -84,7 +82,7 @@ class Parser:
         """
         Returns:
             int: the second argument of the current command. Should be
-            called only if the current command is "C_PUSH", "C_POP", 
+            called only if the current command is "C_PUSH", "C_POP",
             "C_FUNCTION" or "C_CALL".
         """
         return int(self.cur_line[ARG2])
