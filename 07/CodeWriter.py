@@ -6,10 +6,10 @@ Unported License (https://creativecommons.org/licenses/by-nc-sa/3.0/).
 """
 import typing
 
-SEGMENTS = {"local": "LCL", "argument": "ARG", "this": "THIS", "that": "THAT", "pointer 0": "R3", "pointer 1": "R4",
-            "constant": "CONST", "temp": "TEMP"}
+SEGMENTS = {"local": "LCL", "argument": "ARG", "this": "THIS", "that": "THAT", "pointer": 3,
+            "constant": "CONST", "temp": 5}
 REG_SEGMENTS = {"LCL", "ARG", "THIS", "THAT"}
-TEMP = 5
+
 
 class CodeWriter:
     """Translates VM commands into Hack assembly code."""
@@ -23,6 +23,18 @@ class CodeWriter:
         self.output = output_stream
         self.true_counter = 0
 
+    def pop_from_stack(self):
+        self.output.write("@SP\n"
+                          "M = M - 1\n"
+                          "A=M\n"
+                          "D=M\n")
+
+    def push_to_stack(self, argToPush):
+        self.output.write("@SP\n"
+                          "A = M\n"
+                          "M = {0}\n"
+                          "@SP\n"
+                          "M = M+1\n".format(argToPush))
 
     def set_file_name(self, filename: str) -> None:
         """Informs the code writer that the translation of a new VM file is 
@@ -33,9 +45,6 @@ class CodeWriter:
         """
         # Your code goes here!
 
-
-
-
     def write_arithmetic(self, command: str) -> None:
         """Writes the assembly code that is the translation of the given 
         arithmetic command.
@@ -44,7 +53,7 @@ class CodeWriter:
             command (str): an arithmetic command.
         """
         # D = first argument in stack, SP--
-        self.output.write("@SP\nM = M - 1\nA = M\nD = M\n")
+        self.pop_from_stack()
 
         if command == "not":
             self.output.write("D = !D\n")
@@ -52,10 +61,7 @@ class CodeWriter:
             self.output.write("D = -D\n")
 
         else:  # command in ("add", "sub", "eq", "gt", "lt", "and", "or"):
-            # M = the next argument in stack
-            # self.output.write("@R13\nM = D\n")
-            self.output.write("@SP\nM = M - 1\nA = M\n")
-
+            self.output.write("@SP\nM = M-1\nA = M\n")
             if command == "add":
                 self.output.write("D = D+M\n")
             elif command == "sub":
@@ -65,18 +71,22 @@ class CodeWriter:
             elif command == "or":
                 self.output.write("D = M|D\n")
             else:
-                self.output.write("@TRUE{0}\nD = D-M\n".format(self.true_counter))
-                self.true_counter += 1
+                self.output.write("D = M-D\n"
+                                  "@TRUE{0}\n".format(self.true_counter))
                 if command == "eq":
                     self.output.write("D;JEQ\n")
                 elif command == "gt":
                     self.output.write("D;JGT\n")
                 elif command == "lt":
                     self.output.write("D;JLT\n")
-                self.output.write("D = 0\n(TRUE)\nD = -1\n")
-
-            # push D to the stack, SP++
-            self.output.write("@SP\nA = M\nM = D\n@SP\nM = M+1\n")
+                self.output.write("D=0\n"
+                                  "@CONTINUE{0}\n"
+                                  "0;JMP\n"
+                                  "(TRUE{0})\n"
+                                  "D=-1\n"
+                                  "(CONTINUE{0})\n".format(self.true_counter))
+                self.true_counter += 1
+        self.push_to_stack("D")
 
     def write_push_pop(self, command: str, segment: str, index: int) -> None:
         """Writes the assembly code that is the translation of the given 
@@ -93,54 +103,47 @@ class CodeWriter:
         if command == "C_POP":
             if SEGMENTS[segment] in REG_SEGMENTS:
                 # SP-
-                self.output.write("@SP\nM = M - 1\n")
-                # "*addr = *SP"
-                self.output.write("@SP\n"
-                                  "A=M\n"
-                                  "D=M\n"
-                                  "@R13\nM=D\n")
+                self.pop_from_stack()
+                self.output.write("@R13\nM=D\n")
 
                 # R13 = SEGMENTS[segment] + index (the address)"
                 self.output.write("@{0}\n"
-                                    "D=A\n" \
-                                    "@{1}\n" \
-                                    "D=M+D\n" \
-                                    "@R14\n" \
-                                    "M=D\n" \
-                                    "@R13\n"\
-                                    "D=M\n"\
-                                    "@R14\n"\
-                                    "A=M\n"\
+                                    "D=A\n" 
+                                    "@{1}\n" 
+                                    "D=M+D\n"
+                                    "@R14\n" 
+                                    "M=D\n" 
+                                    "@R13\n"
+                                    "D=M\n"
+                                    "@R14\n"
+                                    "A=M\n"
                                     "M=D\n".format(index, SEGMENTS[segment]))
 
-            elif SEGMENTS[segment] == "TEMP":
-                self.output.write("@SP\nM = M - 1\n" \
-                "@SP\n" \
-                "A=M\n" \
-                "D=M\n" \
-                "@{0}\n"\
-                "M=D\n".format(TEMP + index))
-
+            elif segment == "TEMP" or segment == "pointer":
+                self.pop_from_stack()
+                self.output.write("@{0}\n"
+                                  "M=D\n".format(SEGMENTS.get(segment) + index))
 
         elif command == "C_PUSH":
             if SEGMENTS[segment] == "CONST":
                 # D = index
-                self.output.write("@{0}\nD = A\n".format(index))
+                self.output.write("@{0}\n"
+                                  "D = A\n".format(index))
             elif SEGMENTS[segment] in REG_SEGMENTS:
                 # D = *(SEGMENTS[segment] + index)"
-                self.output.write("@{0}\nD = M\n@{1}\nA = A+D\nD = M\n".format(SEGMENTS[segment], index))
-            elif SEGMENTS[segment] == "TEMP":
-                self.output.write("@{0}\n"\
-                "D=M\n".format(TEMP + index))
+                self.output.write("@{0}\n"
+                                  "D = M\n"
+                                  "@{1}\n"
+                                  "A = A+D\n"
+                                  "D = M\n".format(SEGMENTS[segment], index))
 
-            # *SP = D, SP++
-            self.output.write("@SP\nA = M\nM = D\n@SP\nM = M + 1\n")
+            elif segment == "TEMP" or segment == "pointer":
+                self.output.write("@{0}\n"
+                                  "D=M\n".format(SEGMENTS.get(segment) + index))
 
-
+            self.push_to_stack("D")
 
     def close(self) -> None:
         """Closes the output file."""
         self.output.close()
-
-    # def pop_from_stack(self):
 
