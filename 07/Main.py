@@ -22,9 +22,10 @@ def translate_file(
     # input_filename, input_extension = os.path.splitext(os.path.basename(input_file.name))
     parser = Parser(input_file)
     codeWriter = CodeWriter(output_file)
-    while(parser.has_more_commands()):
+    while parser.has_more_commands():
         parser.advance()
-        if parser.comments_and_spaces() : continue
+        if parser.comments_and_spaces():
+            continue
         output_file.write("//" + parser.lines[parser.line_idx] + "\n")
         command_type = parser.command_type()
         arg1 = parser.arg1()
