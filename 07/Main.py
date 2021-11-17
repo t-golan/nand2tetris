@@ -14,7 +14,6 @@ from CodeWriter import CodeWriter
 def translate_file(
         input_file: typing.TextIO, output_file: typing.TextIO) -> None:
     """Translates a single file.
-
     Args:
         input_file (typing.TextIO): the file to translate.
         output_file (typing.TextIO): writes all output to this file.
@@ -24,11 +23,16 @@ def translate_file(
     # Note: you can get the input file's name using:
     # input_filename, input_extension = os.path.splitext(os.path.basename(input_file.name))
     parser = Parser(input_file)
+    codeWriter = CodeWriter(output_file)
     while(parser.has_more_commands()):
         parser.advance()
+        command_type = parser.command_type()
         arg1 = parser.arg1()
-        arg2 = parser.arg2()
-
+        if command_type == "C_ARITHMETIC":
+            codeWriter.write_arithmetic(arg1)
+        elif command_type == "C_PUSH" or "C_POP":
+            arg2 = parser.arg2()
+            codeWriter.write_push_pop(command_type, arg1, arg2)
 
 
 
