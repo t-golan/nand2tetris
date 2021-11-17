@@ -94,7 +94,8 @@ class Parser:
         """
         del self.lines[self.line_idx]
         self.length -= 1
-        self.cur_line = self.lines[self.line_idx]
+        self.line_idx -= 1
+        # self.cur_line = self.lines[self.line_idx]
 
 
     def comments_and_spaces(self) -> bool:
@@ -102,7 +103,7 @@ class Parser:
         Remove comments and spaces from the line. is the line is just comment or blank line, remove the line.
         """
         # if the line deleted (comment or empty) returns True, otherwise returns False
-        self.lines[self.line_idx] = self.lines[self.line_idx].translate(str.maketrans('', '', " "))
+        self.lines[self.line_idx] = self.lines[self.line_idx]
         if self.lines[self.line_idx] == BLANK:
             self.remove_line()
             return True
